@@ -1,9 +1,9 @@
 package com.xor.tiles;
+
+import java.util.ArrayDeque;
 import javafx.scene.image.Image;
 import javafx.scene.image.WritableImage;
-
 import javafx.scene.paint.Color;
-
 public abstract class Tile{
   int x;
   int y;

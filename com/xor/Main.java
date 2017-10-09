@@ -23,8 +23,10 @@ public class Main extends Application {
 
   private Scene createScene(){
     Map map = new Map(10, 600, 400);
-    map.build(new Building(0, 2));
-    for(int i=0;i<60;i++) map.build(new Road(1, i));
+    map.build(new Building(30, 2));
+    map.build(new Building(10, 20));
+    map.build(new Building(20, 23));
+    map.build(new Building(16, 10));
     map.draw();
     HBox root = new HBox(map);
     return new Scene(root);

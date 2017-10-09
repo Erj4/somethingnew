@@ -1,11 +1,17 @@
 package com.xor;
+
+import com.xor.tiles.Road;
+import com.xor.tiles.Tile;
+import com.xor.tiles.Building;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
-import com.xor.tiles.Tile;
-import java.util.ArrayDeque;
 
-class Map extends Canvas{
+public class Map extends Canvas{
   Color BACKGROUND_COLOR = Color.DARKOLIVEGREEN;
   ArrayDeque<Tile> tiles = new ArrayDeque<Tile>();
   double tileSize;
@@ -31,12 +37,35 @@ class Map extends Canvas{
     gc().fillRect(0, 0, getWidth(), getHeight());
   }
 
-  public boolean build(Tile toBuild){
+  public boolean build(Building building){
+    if(connect(building)) return make(building);
+    return false;
+  }
+
+  private boolean make(Tile toBuild){
+    if(tiles.size()==0) { // If it's the first house, it needs a nice road all of its own
+      tiles.add(toBuild);
+      tiles.add(new Road(toBuild.getX()-1, toBuild.getY()));
+      System.out.println("To new beginnings!");
+      return true;
+    }
     if(isFree(toBuild)) {
       tiles.add(toBuild);
       return true;
     }
     return false;
+  }
+
+  public boolean build(Iterable<Building> buildBatch){
+    for(Building toBuild:buildBatch) if(!isFree(toBuild)) return false;
+    for(Building toBuild:buildBatch) make(toBuild);
+    return true;
+  }
+
+  private boolean make(Iterable<? extends Tile> buildBatch){
+    for(Tile toBuild:buildBatch) if(!isFree(toBuild)) return false;
+    for(Tile toBuild:buildBatch) make(toBuild);
+    return true;
   }
 
   public boolean isFree(Tile toBuild){
@@ -45,4 +74,119 @@ class Map extends Canvas{
     }
     return true;
   }
+
+  public boolean connect(Tile tile){
+    ArrayDeque<Road> path = findRoute(tile); // Find 'best' route
+    if(path==null) return false;
+    make(path);
+    return true;
+  }
+
+  private ArrayDeque<Road> findRoute(Tile tile){ // abusing Dijkstra's algorithm (really poorly)
+    if(tiles.size()==0) return new ArrayDeque<Road>();
+
+    int minX=tile.getX();
+    int maxX=tile.getX();
+    int minY=tile.getY();
+    int maxY=tile.getY();
+    for(Tile currentTile:tiles){
+      if     (currentTile.getX()<minX) minX=currentTile.getX();
+      else if(currentTile.getX()>maxX) maxX=currentTile.getX();
+      if     (currentTile.getY()<minY) minY=currentTile.getY();
+      else if(currentTile.getY()>maxY) maxY=currentTile.getY();
+    }
+
+    ArrayList<EmptySpace> unvisitedSpaces = new ArrayList<EmptySpace>();
+    for(int x=minX-1; x<maxX+1; x++) for(int y=minY-1; y<maxY+1; y++){
+      EmptySpace space = new EmptySpace(x, y);
+      if(space.isFree() || !(space.getX()==tile.getX()&&space.getX()==tile.getX())) unvisitedSpaces.add(space);
+    }
+
+    EmptySpace start = new EmptySpace(tile.getX(), tile.getY());
+    start.distance=0;
+
+    EmptySpace current = start;
+    while(unvisitedSpaces.size()>0){ // Main loop
+      for(EmptySpace unvisited:unvisitedSpaces){
+        if(unvisited.isNeighbour(current) && (unvisited.distance==null||current.distance+1<unvisited.distance)) {
+          unvisited.setPrevious(current, 1);
+        }
+      }
+
+      EmptySpace nextSpace=null;
+      for(EmptySpace potential:unvisitedSpaces){
+        if(nextSpace==null){
+          if(potential.distance!=null) nextSpace=potential;
+        }
+        else if (potential.distance!=null&&potential.distance<nextSpace.distance) nextSpace=potential;
+      }
+
+      for(Tile maybeEnd:tiles) {
+        if(nextSpace.isNeighbouringRoad(maybeEnd)){
+          ArrayDeque<Road> toBuild = new ArrayDeque<>();
+          nextSpace.unravel(toBuild);
+          return toBuild;
+        }
+      }
+
+      current = nextSpace;
+      unvisitedSpaces.remove(current);
+    }
+    return null;
+  }
+
+  private class EmptySpace{
+    Integer distance=null;
+    private EmptySpace previous;
+    private int x;
+    private int y;
+
+    @Override
+    public String toString(){
+      return "distance="+distance+"\nx="+x+"\ny="+y;
+    }
+
+    public EmptySpace(int x, int y){
+      this.x = x;
+      this.y = y;
+    }
+
+    void unravel(ArrayDeque<Road> roadArray){
+      roadArray.add(new Road(x, y));
+      if(previous.distance!=0) previous.unravel(roadArray);
+    }
+
+    void setPrevious(EmptySpace previous, int change){
+      this.previous=previous;
+      this.distance = previous.distance+change;
+    }
+
+    boolean isFree(){
+      for(Tile tile:tiles){
+        if(tile.getX()==x && tile.getY()==y) return false;
+      }
+      return true;
+    }
+
+    private boolean isNeighbour(EmptySpace other){
+      boolean isXNeighbour = other.getX()==x+1||other.getX()==x-1;
+      boolean isYNeighbour = other.getY()==y+1||other.getY()==y-1;
+      return ((isXNeighbour&&other.getY()==y)||(isYNeighbour&&other.getX()==x));
+    }
+
+    private boolean isNeighbouringRoad(Tile tile){
+      boolean isXNeighbour = tile.getX()==x+1||tile.getX()==x-1;
+      boolean isYNeighbour = tile.getY()==y+1||tile.getY()==y-1;
+      return ((isXNeighbour&&tile.getY()==y)||(isYNeighbour&&tile.getX()==x)) && (tile instanceof Road);
+
+    }
+
+    int getX(){
+      return x;
+    }
+    int getY(){
+      return y;
+    }
+  }
+
 }
