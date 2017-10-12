@@ -38,22 +38,19 @@ public class Map extends Canvas{
   }
 
   public boolean build(Building building){
-    if(connect(building)) return make(building);
+    if(tiles.size()==1) {
+      Tile otherTile=tiles.peek();
+      if(otherTile instanceof Building) tiles.add(new Road(otherTile.getX()-1, otherTile.getY()));
+    }
+    if(isFree(building)&&connect(building)){
+      make(building);
+      return true;
+    }
     return false;
   }
 
-  private boolean make(Tile toBuild){
-    if(tiles.size()==0) { // If it's the first house, it needs a nice road all of its own
-      tiles.add(toBuild);
-      tiles.add(new Road(toBuild.getX()-1, toBuild.getY()));
-      System.out.println("To new beginnings!");
-      return true;
-    }
-    if(isFree(toBuild)) {
-      tiles.add(toBuild);
-      return true;
-    }
-    return false;
+  private void make(Tile toBuild){
+    tiles.add(toBuild);
   }
 
   public boolean build(Iterable<Building> buildBatch){
@@ -62,15 +59,18 @@ public class Map extends Canvas{
     return true;
   }
 
-  private boolean make(Iterable<? extends Tile> buildBatch){
-    for(Tile toBuild:buildBatch) if(!isFree(toBuild)) return false;
-    for(Tile toBuild:buildBatch) make(toBuild);
-    return true;
+  private void make(Iterable<? extends Tile> buildBatch){
+    for(Tile toBuild:buildBatch) if(isFree(toBuild)) make(toBuild);
   }
 
   public boolean isFree(Tile toBuild){
     for (Tile tile : tiles) {
-      if(tile.getX()==toBuild.getX() && tile.getY()==toBuild.getY()) return false;
+      if(tile.getX()==toBuild.getX() && tile.getY()==toBuild.getY()) {
+        System.out.println("("+toBuild.getX()+","+toBuild.getY()+") occupied by "+tile);
+        make(toBuild);
+        toBuild.setImage(Color.RED);
+        return false;
+      }
     }
     return true;
   }
@@ -99,7 +99,7 @@ public class Map extends Canvas{
     ArrayList<EmptySpace> unvisitedSpaces = new ArrayList<EmptySpace>();
     for(int x=minX-1; x<maxX+1; x++) for(int y=minY-1; y<maxY+1; y++){
       EmptySpace space = new EmptySpace(x, y);
-      if(space.isFree() || !(space.getX()==tile.getX()&&space.getX()==tile.getX())) unvisitedSpaces.add(space);
+      if(space.isFree()) unvisitedSpaces.add(space);
     }
 
     EmptySpace start = new EmptySpace(tile.getX(), tile.getY());
@@ -122,9 +122,9 @@ public class Map extends Canvas{
       }
 
       for(Tile maybeEnd:tiles) {
-        if(nextSpace.isNeighbouringRoad(maybeEnd)){
+        if(current.isNeighbouringRoad(maybeEnd)){
           ArrayDeque<Road> toBuild = new ArrayDeque<>();
-          nextSpace.unravel(toBuild);
+          current.unravel(toBuild);
           return toBuild;
         }
       }
@@ -152,8 +152,10 @@ public class Map extends Canvas{
     }
 
     void unravel(ArrayDeque<Road> roadArray){
-      roadArray.add(new Road(x, y));
-      if(previous.distance!=0) previous.unravel(roadArray);
+      if(distance!=0) {
+        roadArray.add(new Road(x, y));
+        previous.unravel(roadArray);
+      }
     }
 
     void setPrevious(EmptySpace previous, int change){
