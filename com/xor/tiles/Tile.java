@@ -21,6 +21,10 @@ public abstract class Tile{
     return image;
   }
 
+  public void setImage(Color color){
+    this.image=color;
+  }
+
   public int getX(){
     return x;
   }
