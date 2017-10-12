@@ -40,7 +40,7 @@ public class Map extends Canvas{
   public boolean build(Building building){
     if(tiles.size()==1) {
       Tile otherTile=tiles.peek();
-      if(otherTile instanceof Building) tiles.add(new Road(otherTile.getX()-1, otherTile.getY()));
+      if(!(otherTile instanceof Road)) tiles.add(new Road(otherTile.getX()-1, otherTile.getY()));
     }
     if(isFree(building)&&connect(building)){
       make(building);
@@ -64,14 +64,7 @@ public class Map extends Canvas{
   }
 
   public boolean isFree(Tile toBuild){
-    for (Tile tile : tiles) {
-      if(tile.getX()==toBuild.getX() && tile.getY()==toBuild.getY()) {
-        System.out.println("("+toBuild.getX()+","+toBuild.getY()+") occupied by "+tile);
-        make(toBuild);
-        toBuild.setImage(Color.RED);
-        return false;
-      }
-    }
+    for (Tile tile : tiles) if(tile.getX()==toBuild.getX() && tile.getY()==toBuild.getY()) return false;
     return true;
   }
 
